@@ -183,7 +183,27 @@ client.on('interactionCreate', async (interaction) => {
       } catch (err) {
         console.error('⚠️ Failed assigning role:', err);
       }
+// Announce whitelist result publicly
+try {
+  const resultsChannel = await client.channels.fetch(process.env.PUBLIC_RESULTS_CHANNEL_ID);
+  if (resultsChannel?.isTextBased()) {
+    const publicEmbed = new EmbedBuilder()
+      .setTitle('🎉 Whitelist Application Result')
+      .setDescription(`Hey ${interaction.user}, you have been **whitelisted successfully** on the Minecraft server!`)
+      .addFields(
+        { name: 'IGN', value: `\`${ign}\``, inline: true },
+        { name: 'Platform', value: `\`${platform}\``, inline: true }
+      )
+      .setThumbnail(process.env.SERVER_LOGO || null)
+      .setColor(0x57f287)
+      .setTimestamp()
+      .setFooter({ text: 'Welcome to the community!' });
 
+    await resultsChannel.send({ content: `Congrats ${interaction.user}! 🎉`, embeds: [publicEmbed] });
+  }
+} catch (err) {
+  console.error('⚠️ Failed posting public whitelist message:', err);
+}
       await interaction.editReply({
         content: '✅ Application submitted and processed successfully.',
         ephemeral: true
