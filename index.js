@@ -19,7 +19,13 @@ import Whitelist from './models/Whitelist.js';
 dotenv.config();
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.DirectMessages],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.DirectMessages,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
+  ],
   partials: [Partials.Channel]
 });
 
@@ -36,6 +42,41 @@ client.once('ready', () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);
 });
 
+// =====================================================
+// ✅ MESSAGE COMMAND HANDLER (for !console whitelist)
+// =====================================================
+const prefix = '!console';
+
+client.on('messageCreate', async (message) => {
+  if (message.author.bot || !message.guild) return;
+
+  // Match "!console whitelist" or "!consolewhitelist"
+  const regex = new RegExp(`^${prefix}\\s*`, 'i');
+  if (!regex.test(message.content)) return;
+
+  const args = message.content.replace(regex, '').trim().split(/ +/);
+  const command = args.shift()?.toLowerCase();
+
+  if (command === 'whitelist' && args[0] === 'add') {
+    const ign = args[1];
+    if (!ign) return message.reply('⚠️ Please provide an in-game name!');
+
+    try {
+      const consoleChannel = await client.channels.fetch(process.env.CONSOLE_CHANNEL_ID);
+      const cmd = `whitelist add ${ign}`;
+      await consoleChannel.send(`${process.env.CONSOLE_COMMAND_PREFIX || ''}${cmd}`);
+
+      await message.reply(`✅ Sent whitelist command for **${ign}** to the console.`);
+    } catch (err) {
+      console.error('⚠️ Failed sending to console channel:', err);
+      await message.reply('❌ Could not send to the console channel.');
+    }
+  }
+});
+
+// =====================================================
+// 🧾 INTERACTION HANDLER (slash, button, modal)
+// =====================================================
 client.on('interactionCreate', async (interaction) => {
   try {
     // /whitelist-apply command
@@ -183,27 +224,29 @@ client.on('interactionCreate', async (interaction) => {
       } catch (err) {
         console.error('⚠️ Failed assigning role:', err);
       }
-// Announce whitelist result publicly
-try {
-  const resultsChannel = await client.channels.fetch(process.env.PUBLIC_RESULTS_CHANNEL_ID);
-  if (resultsChannel?.isTextBased()) {
-    const publicEmbed = new EmbedBuilder()
-      .setTitle('🎉 Whitelist Application Result')
-      .setDescription(`Hey ${interaction.user}, you have been **whitelisted successfully** on the Minecraft server!`)
-      .addFields(
-        { name: 'IGN', value: `\`${ign}\``, inline: true },
-        { name: 'Platform', value: `\`${platform}\``, inline: true }
-      )
-      .setThumbnail(process.env.SERVER_LOGO || null)
-      .setColor(0x57f287)
-      .setTimestamp()
-      .setFooter({ text: 'Welcome to the community!' });
 
-    await resultsChannel.send({ content: `Congrats ${interaction.user}! 🎉`, embeds: [publicEmbed] });
-  }
-} catch (err) {
-  console.error('⚠️ Failed posting public whitelist message:', err);
-}
+      // Announce whitelist result publicly
+      try {
+        const resultsChannel = await client.channels.fetch(process.env.PUBLIC_RESULTS_CHANNEL_ID);
+        if (resultsChannel?.isTextBased()) {
+          const publicEmbed = new EmbedBuilder()
+            .setTitle('🎉 Whitelist Application Result')
+            .setDescription(`Hey ${interaction.user}, you have been **whitelisted successfully** on the Minecraft server!`)
+            .addFields(
+              { name: 'IGN', value: `\`${ign}\``, inline: true },
+              { name: 'Platform', value: `\`${platform}\``, inline: true }
+            )
+            .setThumbnail(process.env.SERVER_LOGO || null)
+            .setColor(0x57f287)
+            .setTimestamp()
+            .setFooter({ text: 'Welcome to the community!' });
+
+          await resultsChannel.send({ content: `Congrats ${interaction.user}! 🎉`, embeds: [publicEmbed] });
+        }
+      } catch (err) {
+        console.error('⚠️ Failed posting public whitelist message:', err);
+      }
+
       await interaction.editReply({
         content: '✅ Application submitted and processed successfully.',
         ephemeral: true
