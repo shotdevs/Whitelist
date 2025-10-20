@@ -19,13 +19,7 @@ import Whitelist from './models/Whitelist.js';
 dotenv.config();
 
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.DirectMessages,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
-  ],
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.DirectMessages],
   partials: [Partials.Channel]
 });
 
@@ -42,41 +36,6 @@ client.once('ready', () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);
 });
 
-// =====================================================
-// ✅ MESSAGE COMMAND HANDLER (for !console whitelist)
-// =====================================================
-const prefix = '!console';
-
-client.on('messageCreate', async (message) => {
-  if (message.author.bot || !message.guild) return;
-
-  // Match "!console whitelist" or "!consolewhitelist"
-  const regex = new RegExp(`^${prefix}\\s*`, 'i');
-  if (!regex.test(message.content)) return;
-
-  const args = message.content.replace(regex, '').trim().split(/ +/);
-  const command = args.shift()?.toLowerCase();
-
-  if (command === 'whitelist' && args[0] === 'add') {
-    const ign = args[1];
-    if (!ign) return message.reply('⚠️ Please provide an in-game name!');
-
-    try {
-      const consoleChannel = await client.channels.fetch(process.env.CONSOLE_CHANNEL_ID);
-      const cmd = `whitelist add ${ign}`;
-      await consoleChannel.send(`${process.env.CONSOLE_COMMAND_PREFIX || ''}${cmd}`);
-
-      await message.reply(`✅ Sent whitelist command for **${ign}** to the console.`);
-    } catch (err) {
-      console.error('⚠️ Failed sending to console channel:', err);
-      await message.reply('❌ Could not send to the console channel.');
-    }
-  }
-});
-
-// =====================================================
-// 🧾 INTERACTION HANDLER (slash, button, modal)
-// =====================================================
 client.on('interactionCreate', async (interaction) => {
   try {
     // /whitelist-apply command
@@ -150,6 +109,20 @@ client.on('interactionCreate', async (interaction) => {
 
       const discordTag = interaction.fields.getTextInputValue('discordTag') || interaction.user.tag;
       let ign = interaction.fields.getTextInputValue('ign').trim();
+
+      // --- ✨ NEW DUPLICATE CHECK ---
+      const existing = await Whitelist.findOne({
+        $or: [{ discordId: interaction.user.id }, { ign: ign }]
+      });
+
+      if (existing) {
+        return interaction.editReply({
+          content: `❌ You (or this IGN) are already whitelisted.`,
+          ephemeral: true
+        });
+      }
+      // --- END OF CHECK ---
+
       let platform = interaction.fields.getTextInputValue('platform').trim();
 
       platform = platform.toLowerCase().startsWith('b') ? 'Bedrock' : 'Java';
@@ -242,11 +215,12 @@ client.on('interactionCreate', async (interaction) => {
             .setFooter({ text: 'Welcome to the community!' });
 
           await resultsChannel.send({ content: `Congrats ${interaction.user}! 🎉`, embeds: [publicEmbed] });
+
         }
       } catch (err) {
         console.error('⚠️ Failed posting public whitelist message:', err);
       }
-
+      
       await interaction.editReply({
         content: '✅ Application submitted and processed successfully.',
         ephemeral: true
