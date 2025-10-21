@@ -38,7 +38,10 @@ client.once('ready', () => {
 
 client.on('interactionCreate', async (interaction) => {
   try {
-    // /whitelist-apply command
+    // ----------------------------------------------------------------
+    // 1. /whitelist-apply command
+    // (This posts the initial "Apply" button)
+    // ----------------------------------------------------------------
     if (interaction.isChatInputCommand() && interaction.commandName === 'whitelist-apply') {
       const staffRoleId = process.env.STAFF_ROLE_ID;
       const member = interaction.member;
@@ -55,7 +58,7 @@ client.on('interactionCreate', async (interaction) => {
         .setFooter({ text: 'Applications are auto-whitelisted via DiscordSRV' });
 
       const button = new ButtonBuilder()
-        .setCustomId('open_whitelist_modal')
+        .setCustomId('open_whitelist_modal') // This ID now triggers the platform choice
         .setLabel('Apply for Whitelist')
         .setStyle(ButtonStyle.Primary);
 
@@ -66,11 +69,45 @@ client.on('interactionCreate', async (interaction) => {
       return;
     }
 
-    // Button pressed → open modal
+    // ----------------------------------------------------------------
+    // 2. "Apply for Whitelist" Button Pressed
+    // (This now shows the Java/Bedrock platform choice)
+    // ----------------------------------------------------------------
     if (interaction.isButton() && interaction.customId === 'open_whitelist_modal') {
+      const javaButton = new ButtonBuilder()
+        .setCustomId('select_platform_java')
+        .setLabel('Java Edition')
+        .setStyle(ButtonStyle.Success);
+
+      const bedrockButton = new ButtonBuilder()
+        .setCustomId('select_platform_bedrock')
+        .setLabel('Bedrock Edition')
+        .setStyle(ButtonStyle.Secondary);
+
+      await interaction.reply({
+        content: 'Please select your Minecraft platform:',
+        components: [new ActionRowBuilder().addComponents(javaButton, bedrockButton)],
+        ephemeral: true // This message is hidden
+      });
+      return;
+    }
+
+    // ----------------------------------------------------------------
+    // 3. Platform Button (Java or Bedrock) Pressed
+    // (This opens the simplified modal)
+    // ----------------------------------------------------------------
+    if (interaction.isButton() && (interaction.customId === 'select_platform_java' || interaction.customId === 'select_platform_bedrock')) {
+      
+      // We pass the platform choice in the modal's custom ID
+      const modalCustomId = interaction.customId === 'select_platform_java' 
+        ? 'whitelist_modal_java' 
+        : 'whitelist_modal_bedrock';
+      
+      const platformName = interaction.customId === 'select_platform_java' ? 'Java' : 'Bedrock';
+
       const modal = new ModalBuilder()
-        .setCustomId('whitelist_modal')
-        .setTitle('Whitelist Application');
+        .setCustomId(modalCustomId)
+        .setTitle(`${platformName} Whitelist Application`);
 
       const discordTagInput = new TextInputBuilder()
         .setCustomId('discordTag')
@@ -86,31 +123,30 @@ client.on('interactionCreate', async (interaction) => {
         .setPlaceholder('Player123')
         .setRequired(true);
 
-      const platformInput = new TextInputBuilder()
-        .setCustomId('platform')
-        .setLabel('Platform (Java or Bedrock)')
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Java')
-        .setRequired(true);
-
+      // No more platform input needed!
       modal.addComponents(
         new ActionRowBuilder().addComponents(discordTagInput),
-        new ActionRowBuilder().addComponents(ignInput),
-        new ActionRowBuilder().addComponents(platformInput)
+        new ActionRowBuilder().addComponents(ignInput)
       );
 
       await interaction.showModal(modal);
       return;
     }
 
-    // Modal submitted
-    if (interaction.isModalSubmit() && interaction.customId === 'whitelist_modal') {
+    // ----------------------------------------------------------------
+    // 4. Modal Submitted
+    // (This processes the application)
+    // ----------------------------------------------------------------
+    if (interaction.isModalSubmit() && interaction.customId.startsWith('whitelist_modal_')) {
       await interaction.deferReply({ ephemeral: true });
+
+      // Determine platform from the modal's ID
+      const platform = interaction.customId === 'whitelist_modal_java' ? 'Java' : 'Bedrock';
 
       const discordTag = interaction.fields.getTextInputValue('discordTag') || interaction.user.tag;
       let ign = interaction.fields.getTextInputValue('ign').trim();
 
-      // --- ✨ NEW DUPLICATE CHECK ---
+      // --- DUPLICATE CHECK ---
       const existing = await Whitelist.findOne({
         $or: [{ discordId: interaction.user.id }, { ign: ign }]
       });
@@ -123,11 +159,10 @@ client.on('interactionCreate', async (interaction) => {
       }
       // --- END OF CHECK ---
 
-      let platform = interaction.fields.getTextInputValue('platform').trim();
-
-      platform = platform.toLowerCase().startsWith('b') ? 'Bedrock' : 'Java';
+      // Apply Bedrock prefix if needed
       if (platform === 'Bedrock' && !ign.startsWith('_')) ign = `_${ign}`;
 
+      // --- Save to Database ---
       try {
         await Whitelist.create({
           discordId: interaction.user.id,
@@ -139,7 +174,7 @@ client.on('interactionCreate', async (interaction) => {
         console.error('❌ DB write failed:', err);
       }
 
-      // DM user
+      // --- DM user ---
       try {
         await interaction.user.send({
           embeds: [
@@ -157,7 +192,7 @@ client.on('interactionCreate', async (interaction) => {
         console.log('⚠️ User has DMs disabled.');
       }
 
-      // Post to whitelist-forms channel
+      // --- Post to staff logs channel ---
       try {
         const formsChannel = await client.channels.fetch(process.env.FORMS_CHANNEL_ID);
         if (formsChannel?.isTextBased()) {
@@ -177,7 +212,7 @@ client.on('interactionCreate', async (interaction) => {
         console.error('⚠️ Could not post to forms channel:', err);
       }
 
-      // Auto-whitelist using DiscordSRV console
+      // --- Auto-whitelist using DiscordSRV console ---
       if (process.env.AUTO_WHITELIST === 'true') {
         try {
           const consoleChannel = await client.channels.fetch(process.env.CONSOLE_CHANNEL_ID);
@@ -188,7 +223,7 @@ client.on('interactionCreate', async (interaction) => {
         }
       }
 
-      // Assign role
+      // --- Assign role ---
       try {
         const member = await interaction.guild.members.fetch(interaction.user.id);
         const roleId = process.env.WHITELISTED_ROLE_ID;
@@ -198,7 +233,7 @@ client.on('interactionCreate', async (interaction) => {
         console.error('⚠️ Failed assigning role:', err);
       }
 
-      // Announce whitelist result publicly
+      // --- Announce whitelist result publicly ---
       try {
         const resultsChannel = await client.channels.fetch(process.env.PUBLIC_RESULTS_CHANNEL_ID);
         if (resultsChannel?.isTextBased()) {
@@ -221,6 +256,7 @@ client.on('interactionCreate', async (interaction) => {
         console.error('⚠️ Failed posting public whitelist message:', err);
       }
       
+      // --- Send final hidden confirmation ---
       await interaction.editReply({
         content: '✅ Application submitted and processed successfully.',
         ephemeral: true
