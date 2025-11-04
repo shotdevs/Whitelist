@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "ask": [
+      "Read(!/workspaces/Whitelist/**)",
+      "Edit(!/workspaces/Whitelist/**)"
+    ],
+    "allow": [
+      "Read(/workspaces/Whitelist/**)",
+      "Edit(/workspaces/Whitelist/**)"
+    ]
+  },
+  "memoryImport": {},
+  "monitoring": {}
+}

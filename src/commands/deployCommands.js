@@ -1,4 +1,3 @@
-// deploy-commands.js
 import { REST, Routes, SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -13,7 +12,7 @@ const commands = [
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
-(async () => {
+export async function deployCommands() {
   try {
     console.log('Registering slash commands...');
     await rest.put(
@@ -24,4 +23,4 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
   } catch (err) {
     console.error('❌ Error registering commands:', err);
   }
-})();
+}
