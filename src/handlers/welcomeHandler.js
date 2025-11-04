@@ -23,6 +23,10 @@ export async function sendWelcomeMessage(member, channel) {
         type: 17,
         components: [
           {
+            type: 10,
+            content: `# 🎉 Welcome to ZEAKMC!\n\nHey ${member}! We're excited to have you here!\n\n**Get Started:**\n• Apply for whitelists https://discord.com/channels/1172901904934780968/1429724945881235566 \n• Read the rules in <#1172903489064681593>\n• Say hi in chat! https://discord.com/channels/1172901904934780968/1377936663887741058 \n\n-# You are member #${member.guild.memberCount}`
+          },
+          {
             type: 12,
             items: [
               {
@@ -31,10 +35,6 @@ export async function sendWelcomeMessage(member, channel) {
                 }
               }
             ]
-          },
-          {
-            type: 10,
-            content: `# 🎉 Welcome to ZEAKMC!\n\nHey ${member}! We're excited to have you here!\n\n**Get Started:**\n• Check out <#1377936652516724776> for server info\n• Read the rules in <#1172901905513914450>\n• Say hi in chat!\n\n**Want to join the Minecraft server?**\nUse \`/whitelist-status\` to check if you're whitelisted, or ask a staff member about applying!\n\n-# You are member #${member.guild.memberCount}`
           }
         ]
       }

@@ -25,7 +25,7 @@ export async function handleWhitelistStatus(interaction) {
           components: [
             {
               type: 10,
-              content: `# ❓ No Application Found\n\nHey <@${interaction.user.id}>!\n\nYou haven't submitted a whitelist application yet.\n\n**Want to apply?**\nAsk a staff member to use \`/whitelist-apply\` to create an application form.\n\n-# ZEAKMC Whitelist System`
+              content: `# ❓ No Application Found\n\nHey <@${interaction.user.id}>!\n\nYou haven't submitted a whitelist application yet.\n\n**Want to apply?**\n check whitelist channel <#1429724945881235566> to create an application form.\n\n-# ZEAKMC Whitelist System`
             }
           ]
         }
