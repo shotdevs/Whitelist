@@ -5,10 +5,67 @@ import {
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
-  EmbedBuilder,
   PermissionsBitField,
 } from "discord.js";
 import Whitelist from "../models/Whitelist.js";
+
+const MESSAGE_FLAGS = 1 << 15;
+
+export async function handleWhitelistStatus(interaction) {
+  await interaction.deferReply({ flags: 64 });
+
+  const application = await Whitelist.findOne({ discordId: interaction.user.id });
+
+  if (!application) {
+    return interaction.editReply({
+      flags: MESSAGE_FLAGS,
+      components: [
+        {
+          type: 17,
+          components: [
+            {
+              type: 10,
+              content: `# ❓ No Application Found\n\nHey <@${interaction.user.id}>!\n\nYou haven't submitted a whitelist application yet.\n\n**Want to apply?**\nAsk a staff member to use \`/whitelist-apply\` to create an application form.\n\n-# ZEAKMC Whitelist System`
+            }
+          ]
+        }
+      ]
+    });
+  }
+
+  const statusEmoji = {
+    Pending: "🕓",
+    Accepted: "✅",
+    Rejected: "❌"
+  };
+
+  const statusColor = {
+    Pending: "🟡",
+    Accepted: "🟢",
+    Rejected: "🔴"
+  };
+
+  const statusMessage = {
+    Pending: "Your application is currently under review by our staff team. Please be patient!",
+    Accepted: "Congratulations! You've been whitelisted. Check <#1377936652516724776> for the server IP.",
+    Rejected: "Your application was rejected. You may reapply if appropriate."
+  };
+
+  return interaction.editReply({
+    flags: MESSAGE_FLAGS,
+    components: [
+      {
+        type: 17,
+        components: [
+          {
+            type: 10,
+            content: `# ${statusEmoji[application.status]} Whitelist Status\n\n**Applicant:** <@${interaction.user.id}>\n**IGN:** \`${application.ign}\`\n**Status:** ${statusColor[application.status]} **${application.status}**\n\n${statusMessage[application.status]}\n\n**Submitted:** <t:${Math.floor(new Date(application.date).getTime() / 1000)}:R>\n\n-# ZEAKMC Whitelist System`
+          }
+        ]
+      }
+    ]
+  });
+}
 
 export async function handleWhitelistApply(interaction) {
   const staffRoleId = process.env.STAFF_ROLE_ID;
@@ -19,24 +76,32 @@ export async function handleWhitelistApply(interaction) {
   if (!hasStaffRole && !canManageGuild) {
     return interaction.reply({
       content: "❌ You don't have permission to use this command.",
-      ephemeral: true,
+      flags: 64
     });
   }
 
-  const embed = new EmbedBuilder()
-    .setTitle("Whitelist Application")
-    .setDescription("Click the button below to apply for whitelist access to the Minecraft server.")
-    .setColor(0x00ff99)
-    .setFooter({ text: "ZEAKMC | WHITELIST APPLICATION" });
-
-  const button = new ButtonBuilder()
+  const applyButton = new ButtonBuilder()
     .setCustomId("open_whitelist_modal")
-    .setLabel("APPLY NOW")
-    .setStyle(ButtonStyle.Primary);
+    .setLabel("✨ APPLY NOW")
+    .setStyle(ButtonStyle.Success);
 
   await interaction.reply({
-    embeds: [embed],
-    components: [new ActionRowBuilder().addComponents(button)],
+    flags: MESSAGE_FLAGS,
+    components: [
+      {
+        type: 17,
+        components: [
+          {
+            type: 10,
+            content: "# 🎮 Whitelist Application\n\nClick the button below to apply for whitelist access to the **ZEAKMC Minecraft Server**.\n\n**Requirements:**\n• Valid Minecraft username\n• Discord account in good standing\n\n-# ZEAKMC | Powered by your application"
+          },
+          {
+            type: 1,
+            components: [applyButton]
+          }
+        ]
+      }
+    ]
   });
 }
 
@@ -81,16 +146,6 @@ export async function handleModalSubmit(interaction, client) {
     status: "Pending",
   });
 
-  const logEmbed = new EmbedBuilder()
-    .setTitle("📝 New Whitelist Application")
-    .addFields(
-      { name: "User", value: `<@${interaction.user.id}> (${discordTag})` },
-      { name: "IGN", value: `\`${ign}\`` },
-      { name: "Status", value: "🕓 Pending review" }
-    )
-    .setColor(0x0099ff)
-    .setTimestamp();
-
   const acceptButton = new ButtonBuilder()
     .setCustomId(`accept_app_${interaction.user.id}`)
     .setLabel("✅ Accept")
@@ -103,8 +158,22 @@ export async function handleModalSubmit(interaction, client) {
 
   const formsChannel = await client.channels.fetch(process.env.FORMS_CHANNEL_ID);
   await formsChannel.send({
-    embeds: [logEmbed],
-    components: [new ActionRowBuilder().addComponents(acceptButton, rejectButton)],
+    flags: MESSAGE_FLAGS,
+    components: [
+      {
+        type: 17,
+        components: [
+          {
+            type: 10,
+            content: `# 📝 New Whitelist Application\n\n**Applicant:** <@${interaction.user.id}>\n**Discord Tag:** \`${discordTag}\`\n**IGN:** \`${ign}\`\n\n**Status:** 🕓 Pending Review\n\n-# Submitted on <t:${Math.floor(Date.now() / 1000)}:F>`
+          },
+          {
+            type: 1,
+            components: [acceptButton, rejectButton]
+          }
+        ]
+      }
+    ]
   });
 
   await interaction.editReply({
@@ -152,25 +221,36 @@ export async function handleAcceptReject(interaction, client) {
 
     await Whitelist.updateOne({ discordId: applicantId }, { status: "Accepted" });
 
-    const acceptEmbed = new EmbedBuilder()
-      .setTitle("APPLICATION RESULT | ZEAKMC")
-      .setColor(0x57f287)
-      .setThumbnail("https://media.discordapp.net/attachments/1146822834346283090/1430060184331485234/zeakmclgoo.png")
-      .setDescription(
-        `Hey ${applicant}\nYour in-game name **${appData.ign}** is **whitelisted successfully!**\n\nYou can join now ➜ [Server IP](https://discord.com/channels/1172901904934780968/1377936652516724776)`
-      )
-      .setTimestamp()
-      .setFooter({
-        text: "ZEAKMC 💚",
-        iconURL: "https://media.discordapp.net/attachments/1146822834346283090/1430060184331485234/zeakmclgoo.png",
-      });
+    await resultsChannel.send({
+      content: `${applicant}`,
+      flags: MESSAGE_FLAGS,
+      components: [
+        {
+          type: 17,
+          components: [
+            {
+              type: 10,
+              content: `# ✅ APPLICATION APPROVED | ZEAKMC\n\nHey ${applicant}! Great news!\n\n**Your IGN \`${appData.ign}\` has been whitelisted successfully!**\n\nYou can now join the server:\n➜ Check <#1377936652516724776> for the server IP\n\n**Approved by:** ${staff}\n\n-# Welcome to ZEAKMC 💚`
+            }
+          ]
+        }
+      ]
+    });
 
-    await resultsChannel.send({ content: `${applicant}`, embeds: [acceptEmbed] });
-
-    const updatedEmbed = EmbedBuilder.from(message.embeds[0])
-      .setColor(0x57f287)
-      .spliceFields(2, 1, { name: "Status", value: `✅ Accepted by ${staff}` });
-    await message.edit({ embeds: [updatedEmbed], components: [] });
+    await message.edit({
+      flags: MESSAGE_FLAGS,
+      components: [
+        {
+          type: 17,
+          components: [
+            {
+              type: 10,
+              content: `# 📝 Whitelist Application\n\n**Applicant:** <@${applicantId}>\n**Discord Tag:** \`${appData.discordTag}\`\n**IGN:** \`${appData.ign}\`\n\n**Status:** ✅ Accepted by ${staff}\n\n-# Processed on <t:${Math.floor(Date.now() / 1000)}:F>`
+            }
+          ]
+        }
+      ]
+    });
 
     await interaction.reply({
       content: "✅ Application accepted and result posted.",
@@ -181,26 +261,36 @@ export async function handleAcceptReject(interaction, client) {
   if (interaction.customId.startsWith("reject_app_")) {
     await Whitelist.updateOne({ discordId: applicantId }, { status: "Rejected" });
 
-    const rejectEmbed = new EmbedBuilder()
-      .setTitle("APPLICATION RESULT | ZEAKMC")
-      .setColor(0xff0000)
-      .setThumbnail("https://media.discordapp.net/attachments/1146822834346283090/1430060184331485234/zeakmclgoo.png")
-      .setDescription(
-        `Hey ${applicant}\nYour whitelist application for **${appData.ign}** has been **rejected** by the staff team.\n\nYou can reapply later if appropriate.`
-      )
-      .addFields({ name: "Reviewed By", value: `${staff}`, inline: true })
-      .setTimestamp()
-      .setFooter({
-        text: "ZEAKMC 💔",
-        iconURL: "https://media.discordapp.net/attachments/1146822834346283090/1430060184331485234/zeakmclgoo.png",
-      });
+    await resultsChannel.send({
+      content: `${applicant}`,
+      flags: MESSAGE_FLAGS,
+      components: [
+        {
+          type: 17,
+          components: [
+            {
+              type: 10,
+              content: `# ❌ APPLICATION REJECTED | ZEAKMC\n\nHey ${applicant},\n\nUnfortunately, your whitelist application for **\`${appData.ign}\`** has been **rejected** by the staff team.\n\n**You may reapply later if appropriate.**\n\n**Reviewed by:** ${staff}\n\n-# Thank you for your interest in ZEAKMC`
+            }
+          ]
+        }
+      ]
+    });
 
-    await resultsChannel.send({ content: `${applicant}`, embeds: [rejectEmbed] });
-
-    const updatedEmbed = EmbedBuilder.from(message.embeds[0])
-      .setColor(0xff0000)
-      .spliceFields(2, 1, { name: "Status", value: `❌ Rejected by ${staff}` });
-    await message.edit({ embeds: [updatedEmbed], components: [] });
+    await message.edit({
+      flags: MESSAGE_FLAGS,
+      components: [
+        {
+          type: 17,
+          components: [
+            {
+              type: 10,
+              content: `# 📝 Whitelist Application\n\n**Applicant:** <@${applicantId}>\n**Discord Tag:** \`${appData.discordTag}\`\n**IGN:** \`${appData.ign}\`\n\n**Status:** ❌ Rejected by ${staff}\n\n-# Processed on <t:${Math.floor(Date.now() / 1000)}:F>`
+            }
+          ]
+        }
+      ]
+    });
 
     await interaction.reply({
       content: "🚫 Application rejected and result posted.",

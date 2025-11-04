@@ -7,6 +7,15 @@ const commands = [
     .setName('whitelist-apply')
     .setDescription('Send the whitelist application embed (staff-only)')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+    .toJSON(),
+  new SlashCommandBuilder()
+    .setName('whitelist-status')
+    .setDescription('Check your whitelist application status')
+    .toJSON(),
+  new SlashCommandBuilder()
+    .setName('welcome-test')
+    .setDescription('Test the welcome card system (staff-only)')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .toJSON()
 ];
 
