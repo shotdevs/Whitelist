@@ -4,6 +4,7 @@ import {
   handleOpenModal,
   handleModalSubmit,
   handleAcceptReject,
+  handlePlatformSelect,
 } from "../commands/whitelistHandlers.js";
 import { handleWelcomeTest } from "./welcomeHandler.js";
 
@@ -25,7 +26,11 @@ export async function handleInteractions(interaction, client) {
       return await handleOpenModal(interaction);
     }
 
-    if (interaction.isModalSubmit() && interaction.customId === "whitelist_modal") {
+    if (interaction.isStringSelectMenu() && interaction.customId === "platform_select") {
+      return await handlePlatformSelect(interaction);
+    }
+
+    if (interaction.isModalSubmit() && interaction.customId.startsWith("whitelist_modal_")) {
       return await handleModalSubmit(interaction, client);
     }
 

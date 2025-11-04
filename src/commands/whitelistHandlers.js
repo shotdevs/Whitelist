@@ -106,8 +106,56 @@ export async function handleWhitelistApply(interaction) {
 }
 
 export async function handleOpenModal(interaction) {
+  const existingApplication = await Whitelist.findOne({
+    discordId: interaction.user.id,
+    status: { $in: ["Pending", "Accepted"] },
+  });
+
+  if (existingApplication) {
+    return interaction.reply({
+      content: "You have already submitted an application.",
+      flags: 64
+    });
+  }
+
+  const platformSelectMenu = {
+    type: 3, // String Select
+    custom_id: "platform_select",
+    placeholder: "Choose your platform",
+    options: [
+      {
+        label: "Java Edition",
+        value: "java",
+        description: "For PC/Mac/Linux Java Edition players",
+        emoji: { name: "☕" },
+      },
+      {
+        label: "Bedrock Edition",
+        value: "bedrock",
+        description: "For Console/Mobile/Windows 10 Bedrock players",
+        emoji: { name: "🎮" },
+      },
+    ],
+  };
+
+  await interaction.reply({
+    flags: 64,
+    // Use legacy-style action row for interaction replies (type 1 required at top-level)
+    content: "# 📝 Whitelist Application\n\nPlease select your Minecraft platform below:",
+    components: [
+      {
+        type: 1, // Action Row
+        components: [platformSelectMenu],
+      },
+    ],
+  });
+}
+
+export async function handlePlatformSelect(interaction) {
+  const platform = interaction.values[0];
+
   const modal = new ModalBuilder()
-    .setCustomId("whitelist_modal")
+    .setCustomId(`whitelist_modal_${platform}`)
     .setTitle("ZEAKMC Whitelist Application");
 
   const ignInput = new TextInputBuilder()
@@ -127,15 +175,28 @@ export async function handleModalSubmit(interaction, client) {
   await interaction.deferReply({ flags: 64 });
 
   const ign = interaction.fields.getTextInputValue("ign").trim();
+  const platform = interaction.customId.split("_")[2];
   const discordTag = interaction.user.tag;
 
   const existing = await Whitelist.findOne({
-    $or: [{ discordId: interaction.user.id }, { ign }],
+    discordId: interaction.user.id,
+    status: { $in: ['Pending', 'Accepted'] }
   });
 
   if (existing) {
     return interaction.editReply({
-      content: "❌ You (or this IGN) already have a pending or approved application."
+      content: "❌ You already have a pending or approved application. Only rejected users can reapply."
+    });
+  }
+
+  const existingIgn = await Whitelist.findOne({
+    ign,
+    status: { $in: ['Pending', 'Accepted'] }
+  });
+
+  if (existingIgn) {
+    return interaction.editReply({
+      content: "❌ This IGN already has a pending or approved application."
     });
   }
 
@@ -143,6 +204,7 @@ export async function handleModalSubmit(interaction, client) {
     discordId: interaction.user.id,
     discordTag,
     ign,
+    platform,
     status: "Pending",
   });
 
@@ -156,6 +218,9 @@ export async function handleModalSubmit(interaction, client) {
     .setLabel("❌ Reject")
     .setStyle(ButtonStyle.Danger);
 
+  const platformEmoji = platform === 'java' ? '☕' : '🎮';
+  const platformName = platform === 'java' ? 'Java Edition' : 'Bedrock Edition';
+
   const formsChannel = await client.channels.fetch(process.env.FORMS_CHANNEL_ID);
   await formsChannel.send({
     flags: MESSAGE_FLAGS,
@@ -165,7 +230,7 @@ export async function handleModalSubmit(interaction, client) {
         components: [
           {
             type: 10,
-            content: `# 📝 New Whitelist Application\n\n**Applicant:** <@${interaction.user.id}>\n**Discord Tag:** \`${discordTag}\`\n**IGN:** \`${ign}\`\n\n**Status:** 🕓 Pending Review\n\n-# Submitted on <t:${Math.floor(Date.now() / 1000)}:F>`
+            content: `# 📝 New Whitelist Application\n\n**Applicant:** <@${interaction.user.id}>\n**Discord Tag:** \`${discordTag}\`\n**IGN:** \`${ign}\`\n**Platform:** ${platformEmoji} ${platformName}\n\n**Status:** 🕓 Pending Review\n\n-# Submitted on <t:${Math.floor(Date.now() / 1000)}:F>`
           },
           {
             type: 1,
@@ -209,7 +274,8 @@ export async function handleAcceptReject(interaction, client) {
 
   if (interaction.customId.startsWith("accept_app_")) {
     const consoleChannel = await client.channels.fetch(process.env.CONSOLE_CHANNEL_ID);
-    const cmd = process.env.WHITELIST_COMMAND_TEMPLATE.replace("{ign}", appData.ign);
+    const finalIgn = appData.platform === 'bedrock' ? `_${appData.ign}` : appData.ign;
+    const cmd = process.env.WHITELIST_COMMAND_TEMPLATE.replace("{ign}", finalIgn);
     await consoleChannel.send(`${process.env.CONSOLE_COMMAND_PREFIX}${cmd}`);
 
     try {
@@ -222,15 +288,16 @@ export async function handleAcceptReject(interaction, client) {
     await Whitelist.updateOne({ discordId: applicantId }, { status: "Accepted" });
 
     await resultsChannel.send({
-      content: `${applicant}`,
       flags: MESSAGE_FLAGS,
+      // ensure the applicant mention pings correctly when using Components V2
+      allowed_mentions: { users: [applicantId] },
       components: [
         {
           type: 17,
           components: [
             {
               type: 10,
-              content: `# ✅ APPLICATION APPROVED | ZEAKMC\n\nHey ${applicant}! Great news!\n\n**Your IGN \`${appData.ign}\` has been whitelisted successfully!**\n\nYou can now join the server:\n➜ Check <#1377936652516724776> for the server IP\n\n**Approved by:** ${staff}\n\n-# Welcome to ZEAKMC 💚`
+              content: `# ✅ APPLICATION APPROVED | ZEAKMC\n\nHey <@${applicantId}>! Great news!\n\n**Your IGN \`${appData.ign}\` has been whitelisted successfully!**\n\nYou can now join the server:\n➜ Check <#1377936652516724776> for the server IP \n\n-# Welcome to ZEAKMC 💚`
             }
           ]
         }
@@ -262,15 +329,16 @@ export async function handleAcceptReject(interaction, client) {
     await Whitelist.updateOne({ discordId: applicantId }, { status: "Rejected" });
 
     await resultsChannel.send({
-      content: `${applicant}`,
       flags: MESSAGE_FLAGS,
+      // ensure the applicant mention pings correctly when using Components V2
+      allowed_mentions: { users: [applicantId] },
       components: [
         {
           type: 17,
           components: [
             {
               type: 10,
-              content: `# ❌ APPLICATION REJECTED | ZEAKMC\n\nHey ${applicant},\n\nUnfortunately, your whitelist application for **\`${appData.ign}\`** has been **rejected** by the staff team.\n\n**You may reapply later if appropriate.**\n\n**Reviewed by:** ${staff}\n\n-# Thank you for your interest in ZEAKMC`
+              content: `# ❌ APPLICATION REJECTED | ZEAKMC\n\nHey <@${applicantId}>,\n\nUnfortunately, your whitelist application for **\`${appData.ign}\`** has been **rejected** by the staff team.\n\n**You may reapply later if appropriate.**\n\n**Reviewed by:** ${staff}\n\n-# Thank you for your interest in ZEAKMC`
             }
           ]
         }

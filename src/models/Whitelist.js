@@ -5,6 +5,7 @@ const WhitelistSchema = new mongoose.Schema({
   discordId: { type: String, required: true },
   discordTag: { type: String },
   ign: { type: String, required: true },
+  platform: { type: String, enum: ['java', 'bedrock'], required: true },
   status: { type: String, enum: ['Pending', 'Accepted', 'Rejected'], default: 'Pending' },
   date: { type: Date, default: Date.now },
   processedBy: { type: String, default: 'bot' }
