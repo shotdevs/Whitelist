@@ -6,6 +6,7 @@ import {
   TextInputBuilder,
   TextInputStyle,
   PermissionsBitField,
+  EmbedBuilder,
 } from "discord.js";
 import Whitelist from "../models/Whitelist.js";
 
@@ -287,21 +288,23 @@ export async function handleAcceptReject(interaction, client) {
 
     await Whitelist.updateOne({ discordId: applicantId }, { status: "Accepted" });
 
+    const platformEmoji = appData.platform === 'java' ? '☕' : '🎮';
+    const platformName = appData.platform === 'java' ? 'Java Edition' : 'Bedrock Edition';
+
     await resultsChannel.send({
-      flags: MESSAGE_FLAGS,
-      // ensure the applicant mention pings correctly when using Components V2
-      allowed_mentions: { users: [applicantId] },
-      components: [
-        {
-          type: 17,
-          components: [
-            {
-              type: 10,
-              content: `# ✅ APPLICATION APPROVED | ZEAKMC\n\nHey <@${applicantId}>! Great news!\n\n**Your IGN \`${appData.ign}\` has been whitelisted successfully!**\n\nYou can now join the server:\n➜ Check <#1377936652516724776> for the server IP \n\n-# Welcome to ZEAKMC 💚`
-            }
-          ]
-        }
-      ]
+      embeds: [
+        new EmbedBuilder()
+          .setTitle('APPLICATION RESULT | ZEAKMC')
+          .setColor(0x57f287)
+          .setThumbnail('https://media.discordapp.net/attachments/1146822834346283090/1430060184331485234/zeakmclgoo.png?ex=68f866d5&is=68f71555&hm=afaecd9c1d33de52c00093eda43a269a0405c6662e73788dcc0228e03dfe7bec&=&format=webp&quality=lossless&width=282&height=282')
+          .setDescription(`Hey <@${applicantId}> \n your in-game name ${appData.ign} is whitelisted successfully you can join ip from https://discord.com/channels/1172901904934780968/1377936652516724776 Join now`)
+          .addFields(
+            { name: 'Platform', value: `\`${platformName}\``, inline: true }
+          )
+          .setTimestamp()
+          .setFooter({ text: 'ZEAKMC 💚', iconURL: 'https://media.discordapp.net/attachments/1146822834346283090/1430060184331485234/zeakmclgoo.png?ex=68f866d5&is=68f71555&hm=afaecd9c1d33de52c00093eda43a269a0405c6662e73788dcc0228e03dfe7bec&=&format=webp&quality=lossless&width=282&height=282' })
+      ],
+      allowed_mentions: { users: [applicantId] }
     });
 
     await message.edit({
@@ -328,21 +331,23 @@ export async function handleAcceptReject(interaction, client) {
   if (interaction.customId.startsWith("reject_app_")) {
     await Whitelist.updateOne({ discordId: applicantId }, { status: "Rejected" });
 
+    const platformEmoji = appData.platform === 'java' ? '☕' : '🎮';
+    const platformName = appData.platform === 'java' ? 'Java Edition' : 'Bedrock Edition';
+
     await resultsChannel.send({
-      flags: MESSAGE_FLAGS,
-      // ensure the applicant mention pings correctly when using Components V2
-      allowed_mentions: { users: [applicantId] },
-      components: [
-        {
-          type: 17,
-          components: [
-            {
-              type: 10,
-              content: `# ❌ APPLICATION REJECTED | ZEAKMC\n\nHey <@${applicantId}>,\n\nUnfortunately, your whitelist application for **\`${appData.ign}\`** has been **rejected** by the staff team.\n\n**You may reapply later if appropriate.**\n\n**Reviewed by:** ${staff}\n\n-# Thank you for your interest in ZEAKMC`
-            }
-          ]
-        }
-      ]
+      embeds: [
+        new EmbedBuilder()
+          .setTitle('APPLICATION RESULT | ZEAKMC')
+          .setColor(0xed4245)
+          .setThumbnail('https://media.discordapp.net/attachments/1146822834346283090/1430060184331485234/zeakmclgoo.png?ex=68f866d5&is=68f71555&hm=afaecd9c1d33de52c00093eda43a269a0405c6662e73788dcc0228e03dfe7bec&=&format=webp&quality=lossless&width=282&height=282')
+          .setDescription(`Hey <@${applicantId}> \n Unfortunately, your whitelist application for **\`${appData.ign}\`** has been rejected by the staff team. You may reapply later if appropriate.`)
+          .addFields(
+            { name: 'Platform', value: `\`${platformName}\``, inline: true }
+          )
+          .setTimestamp()
+          .setFooter({ text: 'ZEAKMC 💚', iconURL: 'https://media.discordapp.net/attachments/1146822834346283090/1430060184331485234/zeakmclgoo.png?ex=68f866d5&is=68f71555&hm=afaecd9c1d33de52c00093eda43a269a0405c6662e73788dcc0228e03dfe7bec&=&format=webp&quality=lossless&width=282&height=282' })
+      ],
+      allowed_mentions: { users: [applicantId] }
     });
 
     await message.edit({
