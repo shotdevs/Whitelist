@@ -69,6 +69,27 @@ export const data = new SlashCommandBuilder()
             .setDescription('Toggles a ticket category on or off.')
             .addStringOption(option => option.setName('category-id').setDescription('The ID of the category to toggle').setRequired(true))
             .addBooleanOption(option => option.setName('enabled').setDescription('Whether the category should be enabled').setRequired(true))
+    )
+    .addSubcommand(subcommand =>
+        subcommand
+            .setName('naming')
+            .setDescription('Set the ticket naming format for a category.')
+            .addStringOption(option => option.setName('category-id').setDescription('The ID of the category').setRequired(true))
+            .addStringOption(option => 
+                option.setName('format')
+                    .setDescription('Naming format: {num}, {username}, {id}')
+                    .setRequired(true)
+                    .addChoices(
+                        { name: 'ticket-{num} (e.g., ticket-0001)', value: 'ticket-{num}' },
+                        { name: 'ticket-{username} (e.g., ticket-john)', value: 'ticket-{username}' },
+                        { name: '{username}-ticket (e.g., john-ticket)', value: '{username}-ticket' },
+                        { name: '{username}-{num} (e.g., john-0001)', value: '{username}-{num}' },
+                        { name: 'Custom format', value: 'custom' }
+                    ))
+            .addStringOption(option => 
+                option.setName('custom')
+                    .setDescription('Custom format (if "Custom format" selected). Use {num}, {username}, {id}')
+                    .setRequired(false))
     );
 
 export async function execute(interaction) {
@@ -169,6 +190,28 @@ export async function execute(interaction) {
         category.enabled = enabled;
         await category.save();
         await interaction.editReply(createSuccessContainer(`Category "${category.name}" has been ${enabled ? 'enabled' : 'disabled'}.`));
+    } else if (subcommand === 'naming') {
+        const categoryId = interaction.options.getString('category-id');
+        let format = interaction.options.getString('format');
+        const custom = interaction.options.getString('custom');
+        
+        if (format === 'custom' && !custom) {
+            return interaction.editReply(createErrorContainer('Please provide a custom format when selecting "Custom format".'));
+        }
+        
+        if (format === 'custom') {
+            format = custom;
+        }
+        
+        const category = await CategoryConfig.findOne({ categoryId: categoryId, guildId: interaction.guild.id });
+        if (!category) {
+            return interaction.editReply(createErrorContainer('Category not found.'));
+        }
+        
+        category.namingScheme = format;
+        await category.save();
+        
+        await interaction.editReply(createSuccessContainer(`Naming format for category "${category.name}" updated to: \`${format}\`\n\nExample: \`${format.replace('{num}', '0001').replace('{username}', 'john').replace('{id}', 'abc123')}\``));
     }
 }
 

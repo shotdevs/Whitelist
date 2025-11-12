@@ -1,8 +1,28 @@
 export function formatTicketName(template, replacements) {
     let name = template;
-    for (const key in replacements) {
-        name = name.replace(`{${key}}`, replacements[key]);
+    
+    if (replacements.increment !== undefined) {
+        const paddedNum = String(replacements.increment).padStart(4, '0');
+        name = name.replace(/{num}/g, paddedNum);
+        name = name.replace(/{increment}/g, paddedNum);
     }
+    
+    if (replacements.username) {
+        name = name.replace(/{username}/g, replacements.username);
+    }
+    
+    if (replacements.userid) {
+        name = name.replace(/{userid}/g, replacements.userid);
+    }
+    
+    if (replacements.shortid) {
+        name = name.replace(/{id}/g, replacements.shortid);
+    }
+    
+    if (replacements.category) {
+        name = name.replace(/{category}/g, replacements.category);
+    }
+    
     return name.replace(/[^a-zA-Z0-9-_]/g, '').substring(0, 100);
 }
 
