@@ -4,6 +4,7 @@ import GuildConfig from './GuildConfig.js';
 import UserStats from './UserStats.js';
 import StaffActions from './StaffActions.js';
 import CategoryConfig from './CategoryConfig.js';
+import TicketFeedback from './TicketFeedback.js';
 
 export {
     Ticket,
@@ -11,4 +12,5 @@ export {
     UserStats,
     StaffActions,
     CategoryConfig,
+    TicketFeedback,
 };

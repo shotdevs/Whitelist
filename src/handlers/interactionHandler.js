@@ -11,6 +11,7 @@ import { handleButton } from "../utils/buttonHandlers.js";
 import { handleModal } from "../utils/modalHandlers.js";
 import { handleSelectMenu } from "../utils/selectMenuHandlers.js";
 import { handleCommandError } from "../utils/errorHandler.js";
+import { handleFeedbackButton, handleFeedbackModal } from "../utils/feedbackCollector.js";
 import logger from "../utils/logger.js";
 import fs from "fs";
 import path from "path";
@@ -93,6 +94,17 @@ export async function handleInteractions(interaction, client) {
         }
       }
     } else if (interaction.isButton()) {
+      // Check if it's a feedback button
+      if (interaction.customId.startsWith('feedback_') && !interaction.customId.startsWith('feedback_modal_')) {
+        try {
+          await handleFeedbackButton(interaction);
+          return;
+        } catch (error) {
+          await handleCommandError(error, interaction);
+          return;
+        }
+      }
+      
       // Check if it's a ticket system button
       if (interaction.customId.includes('ticket') || 
           interaction.customId.includes('claim') || 
@@ -107,6 +119,17 @@ export async function handleInteractions(interaction, client) {
         }
       }
     } else if (interaction.isModalSubmit()) {
+      // Check if it's a feedback modal
+      if (interaction.customId.startsWith('feedback_modal_')) {
+        try {
+          await handleFeedbackModal(interaction);
+          return;
+        } catch (error) {
+          await handleCommandError(error, interaction);
+          return;
+        }
+      }
+      
       // Check if it's a ticket system modal
       if (interaction.customId.includes('ticket') || 
           interaction.customId.includes('close') ||

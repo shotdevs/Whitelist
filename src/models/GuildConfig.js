@@ -28,6 +28,8 @@ const guildConfigSchema = new mongoose.Schema({
     },
     blacklistedUsers: { type: [String], default: [] },
     blacklistedRoles: { type: [String], default: [] },
+    enableFeedback: { type: Boolean, default: true },
+    feedbackChannel: { type: String, default: null },
 }, { timestamps: true });
 
 export default mongoose.model('GuildConfig', guildConfigSchema);

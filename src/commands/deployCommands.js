@@ -7,6 +7,7 @@ import { data as ticketListData } from './ticket-list.js';
 import { data as ticketSetupData } from './ticket-setup.js';
 import { data as ticketBlacklistData } from './ticket-blacklist.js';
 import { data as ticketTranscriptData } from './ticket-transcript.js';
+import { data as ticketFeedbackData } from './ticket-feedback.js';
 dotenv.config();
 
 const commands = [
@@ -30,7 +31,8 @@ const commands = [
   ticketListData.toJSON(),
   ticketSetupData.toJSON(),
   ticketBlacklistData.toJSON(),
-  ticketTranscriptData.toJSON()
+  ticketTranscriptData.toJSON(),
+  ticketFeedbackData.toJSON()
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);

@@ -4,6 +4,7 @@ import { generateTranscript } from './transcriptGenerator.js';
 import { setTicketPermissions } from './permissionManager.js';
 import { createCloseContainer } from './embedBuilder.js';
 import { notifyTicketClosed } from './dmNotifier.js';
+import { requestFeedback } from './feedbackCollector.js';
 
 export async function closeTicket(client, ticket, closer, reason) {
     ticket.status = 'closed';
@@ -49,6 +50,8 @@ export async function closeTicket(client, ticket, closer, reason) {
         { userId: ticket.creatorId, guildId: ticket.guildId },
         { $pull: { activeTickets: ticket.ticketId } }
     );
+    
+    await requestFeedback(client, ticket, guildConfig);
     
     // Auto-delete ticket after 5 seconds
     setTimeout(async () => {
