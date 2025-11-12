@@ -1,5 +1,12 @@
 import { REST, Routes, SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 import dotenv from 'dotenv';
+import { data as ticketData } from './ticket.js';
+import { data as ticketPanelData } from './ticket-panel.js';
+import { data as ticketCategoryData } from './ticket-category.js';
+import { data as ticketListData } from './ticket-list.js';
+import { data as ticketSetupData } from './ticket-setup.js';
+import { data as ticketBlacklistData } from './ticket-blacklist.js';
+import { data as ticketTranscriptData } from './ticket-transcript.js';
 dotenv.config();
 
 const commands = [
@@ -16,7 +23,14 @@ const commands = [
     .setName('welcome-test')
     .setDescription('Test the welcome card system (staff-only)')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
-    .toJSON()
+    .toJSON(),
+  ticketData.toJSON(),
+  ticketPanelData.toJSON(),
+  ticketCategoryData.toJSON(),
+  ticketListData.toJSON(),
+  ticketSetupData.toJSON(),
+  ticketBlacklistData.toJSON(),
+  ticketTranscriptData.toJSON()
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);

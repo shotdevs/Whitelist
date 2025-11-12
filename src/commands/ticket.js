@@ -66,9 +66,8 @@ export async function execute(interaction) {
 
         } else if (subcommand === 'delete') {
             try {
-                await interaction.deferReply({ ephemeral: true });
+                await interaction.reply({ content: 'Deleting ticket...', ephemeral: true });
                 await deleteTicket(interaction.client, ticket);
-                await interaction.editReply({ content: 'Ticket deleted successfully.' });
             } catch (error) {
                 console.error('Error deleting ticket:', error);
                 try {

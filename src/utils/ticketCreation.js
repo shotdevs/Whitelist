@@ -58,8 +58,8 @@ export async function createTicket(client, guild, user, category, modalResponses
         { type: 2, custom_id: `add_user:${ticket.ticketId}`, label: '👥 Add User', style: ButtonStyle.Primary }
     ];
 
+    await channel.send(`${category.autoGreeting} <@${user.id}>`);
     const payload = createTicketContainer(ticket, buttons);
-    payload.content = `${category.autoGreeting} <@${user.id}>`;
     await channel.send(payload);
 
     await notifyTicketCreated(client, user.id, ticket, guildConfig);
