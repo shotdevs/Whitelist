@@ -66,7 +66,7 @@ This is a Discord.js v14 bot combining **Minecraft server whitelist management**
    - Staff can claim tickets (`/ticket claim` or button)
    - Add users to tickets (`/ticket add` or button)
    - Close tickets with reason (`/ticket close` or button)
-   - Delete tickets (`/ticket delete` or button)
+   - Delete tickets (`/ticket delete` or button) - immediately replies to interaction before deletion to avoid webhook invalidation
    - Transfer ownership (`/ticket transfer`)
    - Reopen closed tickets (`/ticket reopen`)
    - Rename ticket channels (`/ticket rename`)
@@ -76,6 +76,9 @@ This is a Discord.js v14 bot combining **Minecraft server whitelist management**
    - Channel renamed with "closed-" prefix
    - Permissions updated (creator can't send messages)
    - Auto-deleted after 10 seconds (5s warning + 5s delete)
+6. **Ticket Deletion**:
+   - Uses immediate reply (not deferred) to avoid DiscordAPIError[10008] when channel is deleted
+   - Channel deletion invalidates interaction webhooks, so reply must occur before deletion
 
 ### Database Schema
 
